@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load bootstrap_pagination %}
+{% block body %}
+{% load make_link %}
+{% load bootstrap4 %}
+<style>
+
+.container{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.left{
+  width:300px;
+}
+.name{
+  padding:16px;
+  width:300px;
+}
+.image{
+  border-top:1px solid gray;
+}
+.con{
+  border: 1px solid gray;
+}
+
+</style>
+<div class = "container">
+  {% for post in posts %}
+  <div class = 'con'>
+    <div class = 'name'> 
+    작성자: {{post.user}}
+    </div>
+    <div class = 'image'>
+      {% include 'posts/_post.html' %}
+    </div>
+    <div class = 'left'>
+    <div class="modal-body">
+      <div>
+        <p class="text-muted mt-1" style="font-size:10pt; ">{{post.created_at|date:'y-m-d h:m:s'}}</p>
+      </div>
+    </div>
+    <div class="modal-footer p-1"></div> 
+    </div>
+  </div>
+  {% empty %}
+    <p>포스트가 존재하지 않습니다.</p>
+    
+  {% endfor %}
+    
+</div>
+
+<div class="d-flex justify-content-center">
+  {% bootstrap_paginate posts %}
+</div>
+{% endblock %}
+
+<script>
+    function cancle(){
+        if(confirm('삭제하시겠습니까?')){
+            window.location.href="{% url 'posts:delete' post.id %}";
+        }else{
+            window.location.href="#";
+        }
+    }
+</script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+  const likeBtn = document.querySelector('.fa-heart')
+  likeBtn.addEventListener('click', (e)=>{
+    const postId = e.target.dataset.id
+    console.log(postId)
+    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest' // XHR요청
+    axios.defaults.xsrfCookieName = 'csrftoken' // 쿠키안의 csrftoken
+    axios.defaults.xsrfHeaderName = 'X-CSRFToken' // 헤더 설정
+    axios.post(`/posts/${postId}/like/`)
+      .then(response=>{
+          console.log(response.data)
+          if (response.data.is_like) {
+            e.target.classList.remove('fas')
+              e.target.classList.add('far')
+          }else {
+            e.target.classList.remove('far')
+            e.target.classList.add('fas')
+          }
+
+          const likes_cnt = document.querySelector(`#post${postId}`)
+          likes_cnt.innerText = response.data.likes_cnt
+      })
+      .catch(error=>{
+          console.log(error)
+      })    
+  })
+</script>

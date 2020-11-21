@@ -1,0 +1,128 @@
+<!-- 만들어놓은 make_link모듈을 불러온다. -->
+
+{% load make_link %}
+{% load bootstrap4 %}
+<div class="m-2" style="border: 0px; width: 100%;">
+  <button style="position: relative;" type="button" class="btn p-0" data-toggle="modal" data-target=".bd-example-modal-lg{{post.id}}">
+    <img id="post"style="width: 100%;" class="img-responsive" src="{{post.image.url}}" class="card-img-top" onmouseover="this.style.opacity='0.7';" onmouseout="this.style.opacity='1'" alt="...">
+    {% comment %} <h4 id="like"><i style="position: relative; top: -10rem; color:white;" class="fas fa-heart"> {{post.like_users.count}}</i></h4> {% endcomment %}
+  </button>
+  <!-- <p class="card-text">{{post|hashtag_link|safe}}</p> -->
+  <!-- hashtag_link(post)와 동일 -->
+  <!-- safe옵션: <a></a>문자를 실제링크로 바꿔준다. -->
+</div>
+<div class="modal fade bd-example-modal-lg{{post.id}}" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="modal-body">
+            <img src="{{post.image.url}}"id="exampleModalCenterTitle" style="width:100%;">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="modal-header" style="font-weight:500;">
+              <p class="modal-title" id="exampleModalCenterTitle" >
+                <a href="{% url 'accounts:user_page' post.user.id %}">
+                  작성자: {{post.user}}
+                </a>
+              {% if user.is_authenticated and user != post.user %}
+                <a style="text-decoration: none;" href="{% url 'accounts:follow' post.user.id %}"> • 팔로우</a>
+              {% endif %}
+              </p>
+                  <ul class="navbar-nav">
+                      <li class="nav-item dropdown">
+                          <a href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" style="color: gray;">
+                              <i class="fas fa-ellipsis-h"></i>
+                          </a>
+                          <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" style="font-size:10pt;">
+                            <a class="dropdown-item" href="{% url 'posts:detail' post.id %}">게시글 보기</a>
+                        {% if user.is_authenticated %}
+                            {% if user == post.user %}
+                            <a class="dropdown-item" href="{% url 'posts:update' post.id %}">수정</a>
+                            <a class="dropdown-item" onclick="cancle()">삭제</a>
+                          </div>
+                          {% endif %}
+                      {% endif %}
+                      </li>
+                  </ul>
+          </div>
+          <div class="modal-body pb-0">
+            <div style="height: 60px;">
+              <span style="font-weight:500;"></span>{{post|hashtag_link|safe}}
+              <p class="text-muted mt-1" style="font-size:10pt;">{{post.created_at|date:'y-m-d h:m:s'}}</p>
+            </div>
+            {% for comment in post.comment_set.all %}
+              {% if request.user == comment.user or request.user == post.user %}
+                <a href="{% url 'posts:comment_delete' post.id comment.id %}">
+                  <button type="button" class="close" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </a>
+              {% endif %}
+              <p class="m-0"><span style="font-weight:500;">{{comment.user}}</span> <span>{{comment.content}}</span></p>
+            {% endfor %}
+            <br>
+            {% if user.is_authenticated %}
+              {% if user in post.like_users.all %}
+                <h4><i class="fas fa-heart heart" data-id="{{post.id}}" style="color:red;"></i> &nbsp;<i class="far fa-comment" style="color:gray;"></i></h4>
+              {% else %}
+                <h4><i class="far fa-heart heart" data-id="{{post.id}}" style="color:red;"></i> &nbsp;<i class="far fa-comment" style="color:gray;"></i></h4>
+              {% endif %}
+            {% else %}
+              <a href="{% url 'posts:like' post.id %}"><h4><i class="fas fa-heart heart" style="color:red;"></i></a> &nbsp;<i class="far fa-comment" style="color:gray;"></i></h4>
+            {% endif %} 
+            <p style="font-size:10pt;"><span id="post{{post.id}}">{{post.like_users.count}}</span>명이 좋아합니다</p>
+          </div>
+          <div class="modal-footer p-1"></div>
+          <form action="{% url 'posts:comment_create' post.id %}" method="post">
+            {% csrf_token %}
+            <div class="d-flex ml-2">
+              {% bootstrap_field comment_form.content show_label=False placeholder="댓글 달기..." %}
+              <input class="btn mb-3 ml-2 text-primary" type="submit" value="게시">
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+  function cancle(){
+      if(confirm('삭제하시겠습니까?')){
+          window.location.href="{% url 'posts:delete' post.id %}";
+      }else{
+        console.log('asdf')
+          // window.location.href="#";
+      }
+  }
+</script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+  const likeBtn = document.querySelector('.fa-heart')
+  likeBtn.addEventListener('click', (e)=>{
+    const postId = e.target.dataset.id
+    axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest' // XHR요청
+    axios.defaults.xsrfCookieName = 'csrftoken' // 쿠키안의 csrftoken
+    axios.defaults.xsrfHeaderName = 'X-CSRFToken' // 헤더 설정
+    axios.post(`/posts/${postId}/like/`)
+      .then(response=>{
+          console.log(response.data)
+          if (response.data.is_like) {
+            e.target.classList.remove('fas')
+              e.target.classList.add('far')
+          }else {
+            e.target.classList.remove('far')
+            e.target.classList.add('fas')
+          }
+
+          const likes_cnt = document.querySelector(`#post${postId}`)
+          likes_cnt.innerText = response.data.likes_cnt
+      })
+      .catch(error=>{
+          console.log(error)
+      })    
+  })
+</script>

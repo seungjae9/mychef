@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% block body %}
+
+<style>
+.target_img {
+    width: 10%;
+    height: 10%;
+}
+img{
+    width:80%;
+}
+
+</style>
+<div style="text-align: center;">
+    <input type="file" id="image" accept="image/*" onchange="setThumbnail(event);"/>
+    <div id="image_container"></div>
+    <button type="button" class="btn btn-primary" onclick="getRecipe(event);">레시피 검색</button>
+</div>
+
+
+<div class="container" style="text-align: center;">
+
+    <div id="label-container" style="margin-top: 1%;">
+    </div>
+</div>
+
+  
+  
+
+
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    var data = "{{food|safe}}"
+    var a = data.replaceAll("[","").replaceAll("]","").replaceAll(/(?:\\[rn])+/g, '').split(", {")
+    console.log(a)
+
+    var obj = new Array(a.length)
+
+    for(var i = 0;i<a.length;i++){
+        if(i != 0)
+            a[i] = "{"+a[i] 
+        a[i] = a[i].replaceAll("'",'"')
+        obj[i] = JSON.parse(a[i]);
+    }
+
+    console.log(obj)
+
+    function setThumbnail(event) {
+        if (document.querySelector('#my_img')) {
+            var parent = document.getElementById("image_container");
+            var child = document.getElementById("my_img");
+            parent.removeChild(child);
+        };
+        var reader = new FileReader(); 
+        reader.onload = function(event) { 
+            var img = document.createElement("img");
+            img.setAttribute("id",'my_img');
+            img.setAttribute("src", event.target.result);
+            img.setAttribute("class", "target_img");
+            document.querySelector("div#image_container").appendChild(img); 
+        }; 
+        reader.readAsDataURL(event.target.files[0]); 
+    };
+
+    function getRecipe(event) {
+        var formData = new FormData();
+        formData.append('uploadFile', $('#image')[0].files[0]);
+
+        axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest' // XHR요청
+        axios.defaults.xsrfCookieName = 'csrftoken' // 쿠키안의 csrftoken
+        axios.defaults.xsrfHeaderName = 'X-CSRFToken' // 헤더 설정
+        axios
+            .post('/food/test/', formData)
+            .then(res=>{
+                console.log(res['data']['labels'])
+                labelContainer = document.getElementById("label-container");
+                lists = res['data']['labels']
+                var cnt = 1
+                for(var i = 0; i<obj.length;i++){
+                    if(lists.length>=3 && (obj[i]['reci'].indexOf(lists[0])>=0 || obj[i]['reci'].indexOf(lists[1])>=0 || obj[i]['reci'].indexOf(lists[2])>=0) ){
+                        var div = document.createElement('div');
+                        var img = document.createElement('img');
+                        var title = document.createElement('h4');
+                        img.src = obj[i]['img'];
+                        title.innerHTML = obj[i]['name'];
+                        div.appendChild(title)
+                        div.appendChild(img)
+                        labelContainer.appendChild(div);
+                        cnt+=1
+                    }else if(lists.length>=2 && (obj[i]['reci'].indexOf(lists[0])>=0 || obj[i]['reci'].indexOf(lists[1])>=0)){
+                        var div = document.createElement('div');
+                        var img = document.createElement('img');
+                        var title = document.createElement('h4');
+                        img.src = obj[i]['img'];
+                        title.innerHTML = obj[i]['name'];
+                        div.appendChild(title)
+                        div.appendChild(img)
+                        labelContainer.appendChild(div);
+                        cnt+=1
+                    }else if(lists.length==1 && obj[i]['reci'].indexOf(lists[0])>=0){
+                        var div = document.createElement('div');
+                        var img = document.createElement('img');
+                        var title = document.createElement('h4');
+                        img.src = obj[i]['img'];
+                        title.innerHTML = obj[i]['name'];
+                        div.appendChild(title)
+                        div.appendChild(img)
+                        labelContainer.appendChild(div);
+                        cnt+=1
+                    }
+                }
+            })
+
+    }
+</script>
+
+
+{% endblock %}
